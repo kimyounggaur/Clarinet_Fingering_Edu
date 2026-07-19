@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="표준 보엠식 B플랫 및 A 소프라노 클라리넷의 기보음 E3-A6 기본·대체 운지표">
+<title>클라리넷 표준 운지표</title>
+<style>
+:root{--ink:#17212b;--muted:#60707d;--line:#d8e0e6;--paper:#f4f6f8;--card:#fff;--pressed:#b51f32;--pressed-dark:#7f1d2d;}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"DejaVu Sans",NanumGothic,"Noto Sans CJK KR","Apple SD Gothic Neo",system-ui,sans-serif;line-height:1.45}
+header{background:#fff;border-bottom:4px solid var(--pressed);padding:clamp(28px,5vw,64px) max(20px,5vw) 28px}
+header .wrap,.main{max-width:1500px;margin:auto}
+h1{margin:0;font-size:clamp(2rem,4vw,4rem);letter-spacing:-.04em}
+.lede{margin:.5rem 0 0;color:var(--muted);font-size:clamp(1rem,1.6vw,1.25rem)}
+.factbar{display:flex;flex-wrap:wrap;gap:.55rem 1.1rem;margin-top:1.25rem;color:#40505c;font-size:.93rem}
+.factbar span{padding:.35rem .65rem;background:#f5f7f9;border:1px solid var(--line);border-radius:999px}
+.main{padding:26px max(16px,3vw) 60px}
+.controls{position:sticky;top:0;z-index:10;display:flex;flex-wrap:wrap;gap:.7rem;align-items:center;padding:12px;margin-bottom:18px;background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 28px rgba(22,33,43,.08)}
+.controls label{font-weight:700;font-size:.9rem}
+.controls select,.controls input[type="search"]{height:42px;border:1px solid #bfc9d1;border-radius:10px;background:#fff;padding:0 .75rem;font:inherit;color:var(--ink)}
+.controls input[type="search"]{min-width:170px}
+.filter-group{display:flex;flex-wrap:wrap;gap:.35rem}
+button{font:inherit}
+.filter-group button,#playButton{border:1px solid #bac5cd;background:#fff;color:var(--ink);padding:.55rem .75rem;border-radius:10px;cursor:pointer}
+.filter-group button[aria-pressed="true"],#playButton:hover{background:#17212b;color:#fff;border-color:#17212b}
+.toggle{display:flex;align-items:center;gap:.45rem;margin-left:auto;white-space:nowrap}
+.focus{scroll-margin-top:80px;display:grid;grid-template-columns:minmax(230px,.7fr) minmax(280px,1.3fr);gap:22px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:20px;padding:clamp(18px,3vw,34px);box-shadow:0 12px 36px rgba(22,33,43,.07);margin-bottom:24px}
+.focus-copy h2{font-size:clamp(2.1rem,5vw,4.8rem);margin:.3rem 0 .2rem;letter-spacing:-.035em}
+.focus-copy p{color:var(--muted);margin:0}
+.register-chip{display:inline-flex;padding:.36rem .75rem;border-radius:999px;font-size:.86rem;font-weight:800;background:#e8eef9;color:#284f86}
+.register-chip[data-register="chalumeau"]{background:#e8f3ee;color:#245642}
+.register-chip[data-register="throat"]{background:#fff3d6;color:#7a5313}
+.register-chip[data-register="clarion"]{background:#e8eef9;color:#284f86}
+.register-chip[data-register="altissimo"]{background:#f5e8f4;color:#7a326f}
+.focus-diagrams{display:flex;gap:clamp(16px,5vw,70px);justify-content:center;min-height:270px;align-items:center}
+.chart-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:12px}
+.note-card[hidden]{display:none!important}
+.note-card{appearance:none;text-align:left;display:block;width:100%;min-height:245px;border:1px solid var(--line);border-left:6px solid #84929d;border-radius:15px;background:#fff;padding:13px 12px 10px;cursor:pointer;box-shadow:0 4px 15px rgba(22,33,43,.04);transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+.note-card:hover{transform:translateY(-2px);box-shadow:0 10px 25px rgba(22,33,43,.10)}
+.note-card.selected{outline:3px solid rgba(181,31,50,.24);border-color:var(--pressed)}
+.note-card[data-register="chalumeau"]{border-left-color:#3c8062}
+.note-card[data-register="throat"]{border-left-color:#b48025}
+.note-card[data-register="clarion"]{border-left-color:#4a71aa}
+.note-card[data-register="altissimo"]{border-left-color:#99518e}
+.card-head{display:flex;justify-content:space-between;gap:.4rem;align-items:flex-start}
+.card-head strong{display:block;font-size:1.25rem}
+.card-head small{display:block;color:var(--muted);font-size:.78rem}
+.card-head em{font-style:normal;font-size:.72rem;font-weight:800;padding:.28rem .5rem;border-radius:999px;background:var(--badge-bg);color:var(--badge-ink);white-space:nowrap}
+.card-diagrams{display:flex;justify-content:center;align-items:flex-start;gap:19px;min-height:182px}
+.diagram-figure{margin:5px 0 0;text-align:center;min-width:54px}
+.diagram-figure figcaption{font-size:.72rem;font-weight:800;color:#687680;margin-bottom:1px}
+.finger-svg{width:57px;height:168px;overflow:visible}
+.diagram-figure.large .finger-svg{width:104px;height:264px}
+.diagram-figure.large figcaption{font-size:.9rem}
+.key{transition:fill .18s ease,stroke .18s ease}
+.key.active.animate{animation:keyPress .48s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i) * 55ms)}
+@keyframes keyPress{0%{fill:#fff;stroke:#95a1ab;opacity:.45}70%{fill:#cb5161;stroke:#7f1d2d;opacity:1}100%{fill:#b51f32;stroke:#7f1d2d;opacity:1}}
+.help{margin:26px 0 0;padding:18px 20px;border-radius:14px;background:#fff;border:1px solid var(--line);color:#4e5d69}
+.help strong{color:var(--ink)}
+footer{max-width:1500px;margin:0 auto;padding:0 max(16px,3vw) 45px;color:#6a7781;font-size:.88rem}
+@media(max-width:760px){.toggle{margin-left:0}.focus{grid-template-columns:1fr}.focus-copy{text-align:center}.focus-diagrams{min-height:230px;gap:25px}.diagram-figure.large .finger-svg{height:225px;width:87px}}
+@media print{@page{size:A2 landscape;margin:9mm}body{background:#fff}header{padding:0 0 12px;border-bottom-width:2px}.main{max-width:none;padding:8px}.controls,.focus,.help,footer{display:none!important}.chart-grid{grid-template-columns:repeat(7,1fr);gap:4mm}.note-card{break-inside:avoid;min-height:58mm;box-shadow:none;padding:3mm;border-radius:3mm}.finger-svg{height:43mm;width:15mm}.card-diagrams{min-height:45mm;gap:3mm}}
+</style>
+</head>
+<body>
+<header><div class="wrap"><h1>클라리넷 표준 운지표</h1><p class="lede">표준 보엠식 B♭ / A 소프라노 클라리넷 · 기보음 E3-A6 · 기본 42개 + 대체 19개</p><div class="factbar"><span>붉은색 = 누름 / 막음</span><span>빈 키 = 열림</span><span>B♭ 실음: 장2도 낮음</span><span>A 실음: 단3도 낮음</span></div></div></header>
+<main class="main">
+<section class="controls" aria-label="운지표 제어">
+<label for="noteSelect">음 선택</label><select id="noteSelect"></select>
+<label for="searchInput">검색</label><input id="searchInput" type="search" placeholder="예: F♯4, B♭5">
+<div class="filter-group" aria-label="음역 필터"><button type="button" data-filter="all" aria-pressed="true">전체</button><button type="button" data-filter="chalumeau" aria-pressed="false">샬뤼모</button><button type="button" data-filter="throat" aria-pressed="false">목음역</button><button type="button" data-filter="clarion" aria-pressed="false">클라리온</button><button type="button" data-filter="altissimo" aria-pressed="false">알티시모</button></div>
+<button type="button" id="playButton">키 누름 재생</button>
+<label class="toggle"><input id="alternateToggle" type="checkbox" checked> 대체 운지 표시</label>
+</section>
+<section class="focus" id="focusPanel" aria-live="polite"><div class="focus-copy"><span class="register-chip" id="focusRegister">샬뤼모</span><h2 id="focusTitle">E3</h2><p id="focusMeta">기보음</p></div><div class="focus-diagrams" id="focusDiagrams"></div></section>
+<section class="chart-grid" id="chartGrid" aria-label="클라리넷 운지 카드"></section>
+<p class="help"><strong>사용법:</strong> 카드를 누르면 위의 큰 도식으로 확대됩니다. ‘키 누름 재생’은 선택한 음의 접촉부를 순서대로 표시합니다. 대체 운지는 음정, 음색, 빠른 연결, 트릴 상황에 따라 선택하며 특히 알티시모는 악기·마우스피스·리드와 연주자에 따라 미세 조정이 필요합니다.</p>
+</main>
+<footer>음역 구분: 샬뤼모 E3-F♯4 · 목음역 G4-B♭4 · 클라리온 B4-C6 · 알티시모 C♯6-A6. 검증 기준: Yamaha Boehm-system chart, RLMF 및 Woodwind Fingering Guide 대조. 도식은 독자 제작한 추상 키맵입니다.</footer>
+<script>
+"use strict";
+const COMPONENTS = [[-1.769,-12.363,3.271,12.023],[-11.274,-11.327,3.272,10.011],[-2.092,-9.362,8.988,11.748],[-11.851,0.0,4.424,4.424],[-2.172,0.46,4.423,4.422],[4.033,8.924,1.702,1.703],[-8.725,9.724,4.709,13.94],[-0.399,9.842,5.692,7.372],[-2.727,9.915,5.53,5.53],[-9.022,13.718,2.604,12.054],[-9.044,15.861,2.604,12.053],[-5.444,15.88,1.703,1.705],[-5.001,16.799,9.436,6.633],[-1.231,17.634,2.535,2.536],[4.423,22.918,5.686,7.439],[2.642,24.875,3.197,14.685],[5.859,26.704,2.619,12.856],[-2.722,32.424,5.53,5.53],[-2.723,38.862,5.529,5.53],[-5.3,44.412,6.487,2.113],[-3.038,47.019,6.145,6.143],[-9.049,52.033,9.855,15.926],[-5.721,53.068,7.538,14.891],[-9.665,56.062,10.435,11.896],[-5.743,57.096,7.538,10.862]];
+const ROUND_IDS = new Set([3, 4, 5, 8, 11, 13, 17, 18, 20]);
+const HORIZONTAL_IDS = new Set([2, 7, 12, 14, 19]);
+const DATA = [{"index":1,"midi":52,"id":"E3","primaryName":"E3","enharmonic":"","display":"E3","register":"chalumeau","registerKo":"샬뤼모","primary":[3,4,8,13,15,17,18,20,24],"alternate":[3,4,8,13,17,18,20,23]},{"index":2,"midi":53,"id":"F3","primaryName":"F3","enharmonic":"","display":"F3","register":"chalumeau","registerKo":"샬뤼모","primary":[3,4,8,13,17,18,20,24],"alternate":[3,4,8,13,14,17,18,20]},{"index":3,"midi":54,"id":"Fs3","primaryName":"F♯3","enharmonic":"G♭3","display":"F♯3 / G♭3","register":"chalumeau","registerKo":"샬뤼모","primary":[3,4,8,13,16,17,18,20,24],"alternate":[3,4,8,13,17,18,20,21]},{"index":4,"midi":55,"id":"G3","primaryName":"G3","enharmonic":"","display":"G3","register":"chalumeau","registerKo":"샬뤼모","primary":[3,4,8,13,17,18,20],"alternate":null},{"index":5,"midi":56,"id":"Gs3","primaryName":"G♯3","enharmonic":"A♭3","display":"G♯3 / A♭3","register":"chalumeau","registerKo":"샬뤼모","primary":[3,4,8,13,17,18,20,22],"alternate":null},{"index":6,"midi":57,"id":"A3","primaryName":"A3","enharmonic":"","display":"A3","register":"chalumeau","registerKo":"샬뤼모","primary":[3,4,8,13,17,18],"alternate":null},{"index":7,"midi":58,"id":"As3","primaryName":"A♯3","enharmonic":"B♭3","display":"A♯3 / B♭3","register":"chalumeau","registerKo":"샬뤼모","primary":[3,4,8,13,17],"alternate":null},{"index":8,"midi":59,"id":"B3","primaryName":"B3","enharmonic":"","display":"B3","register":"chalumeau","registerKo":"샬뤼모","primary":[3,4,8,13,18],"alternate":[3,4,8,13,17,19]},{"index":9,"midi":60,"id":"C4","primaryName":"C4","enharmonic":"","display":"C4","register":"chalumeau","registerKo":"샬뤼모","primary":[3,4,8,13],"alternate":null},{"index":10,"midi":61,"id":"Cs4","primaryName":"C♯4","enharmonic":"D♭4","display":"C♯4 / D♭4","register":"chalumeau","registerKo":"샬뤼모","primary":[3,4,8,11,12,13],"alternate":null},{"index":11,"midi":62,"id":"D4","primaryName":"D4","enharmonic":"","display":"D4","register":"chalumeau","registerKo":"샬뤼모","primary":[3,4,8],"alternate":null},{"index":12,"midi":63,"id":"Ds4","primaryName":"D♯4","enharmonic":"E♭4","display":"D♯4 / E♭4","register":"chalumeau","registerKo":"샬뤼모","primary":[3,4,8,10],"alternate":[3,4,5,7,8]},{"index":13,"midi":64,"id":"E4","primaryName":"E4","enharmonic":"","display":"E4","register":"chalumeau","registerKo":"샬뤼모","primary":[3,4],"alternate":null},{"index":14,"midi":65,"id":"F4","primaryName":"F4","enharmonic":"","display":"F4","register":"chalumeau","registerKo":"샬뤼모","primary":[3],"alternate":null},{"index":15,"midi":66,"id":"Fs4","primaryName":"F♯4","enharmonic":"G♭4","display":"F♯4 / G♭4","register":"chalumeau","registerKo":"샬뤼모","primary":[4],"alternate":[3,9,10]},{"index":16,"midi":67,"id":"G4","primaryName":"G4","enharmonic":"","display":"G4","register":"throat","registerKo":"목음역","primary":[],"alternate":null},{"index":17,"midi":68,"id":"Gs4","primaryName":"G♯4","enharmonic":"A♭4","display":"G♯4 / A♭4","register":"throat","registerKo":"목음역","primary":[2],"alternate":null},{"index":18,"midi":69,"id":"A4","primaryName":"A4","enharmonic":"","display":"A4","register":"throat","registerKo":"목음역","primary":[0],"alternate":null},{"index":19,"midi":70,"id":"As4","primaryName":"A♯4","enharmonic":"B♭4","display":"A♯4 / B♭4","register":"throat","registerKo":"목음역","primary":[0,1],"alternate":[0,6]},{"index":20,"midi":71,"id":"B4","primaryName":"B4","enharmonic":"","display":"B4","register":"clarion","registerKo":"클라리온","primary":[1,3,4,8,13,15,17,18,20,24],"alternate":[1,3,4,8,13,17,18,20,23]},{"index":21,"midi":72,"id":"C5","primaryName":"C5","enharmonic":"","display":"C5","register":"clarion","registerKo":"클라리온","primary":[1,3,4,8,13,17,18,20,24],"alternate":[1,3,4,8,13,14,17,18,20]},{"index":22,"midi":73,"id":"Cs5","primaryName":"C♯5","enharmonic":"D♭5","display":"C♯5 / D♭5","register":"clarion","registerKo":"클라리온","primary":[1,3,4,8,13,16,17,18,20,24],"alternate":[1,3,4,8,13,17,18,20,21]},{"index":23,"midi":74,"id":"D5","primaryName":"D5","enharmonic":"","display":"D5","register":"clarion","registerKo":"클라리온","primary":[1,3,4,8,13,17,18,20],"alternate":null},{"index":24,"midi":75,"id":"Ds5","primaryName":"D♯5","enharmonic":"E♭5","display":"D♯5 / E♭5","register":"clarion","registerKo":"클라리온","primary":[1,3,4,8,13,17,18,20,22],"alternate":null},{"index":25,"midi":76,"id":"E5","primaryName":"E5","enharmonic":"","display":"E5","register":"clarion","registerKo":"클라리온","primary":[1,3,4,8,13,17,18],"alternate":null},{"index":26,"midi":77,"id":"F5","primaryName":"F5","enharmonic":"","display":"F5","register":"clarion","registerKo":"클라리온","primary":[1,3,4,8,13,17],"alternate":null},{"index":27,"midi":78,"id":"Fs5","primaryName":"F♯5","enharmonic":"G♭5","display":"F♯5 / G♭5","register":"clarion","registerKo":"클라리온","primary":[1,3,4,8,13,18],"alternate":[1,3,4,8,13,17,19]},{"index":28,"midi":79,"id":"G5","primaryName":"G5","enharmonic":"","display":"G5","register":"clarion","registerKo":"클라리온","primary":[1,3,4,8,13],"alternate":null},{"index":29,"midi":80,"id":"Gs5","primaryName":"G♯5","enharmonic":"A♭5","display":"G♯5 / A♭5","register":"clarion","registerKo":"클라리온","primary":[1,3,4,8,11,12,13],"alternate":null},{"index":30,"midi":81,"id":"A5","primaryName":"A5","enharmonic":"","display":"A5","register":"clarion","registerKo":"클라리온","primary":[1,3,4,8],"alternate":null},{"index":31,"midi":82,"id":"As5","primaryName":"A♯5","enharmonic":"B♭5","display":"A♯5 / B♭5","register":"clarion","registerKo":"클라리온","primary":[1,3,4,8,10],"alternate":[1,3,4,5,7,8]},{"index":32,"midi":83,"id":"B5","primaryName":"B5","enharmonic":"","display":"B5","register":"clarion","registerKo":"클라리온","primary":[1,3,4],"alternate":null},{"index":33,"midi":84,"id":"C6","primaryName":"C6","enharmonic":"","display":"C6","register":"clarion","registerKo":"클라리온","primary":[1,3],"alternate":null},{"index":34,"midi":85,"id":"Cs6","primaryName":"C♯6","enharmonic":"D♭6","display":"C♯6 / D♭6","register":"altissimo","registerKo":"알티시모","primary":[1,3,8,13,17,18],"alternate":[1,3,9,10]},{"index":35,"midi":86,"id":"D6","primaryName":"D6","enharmonic":"","display":"D6","register":"altissimo","registerKo":"알티시모","primary":[1,3,8,13,17,22],"alternate":[1,3,6]},{"index":36,"midi":87,"id":"Ds6","primaryName":"D♯6","enharmonic":"E♭6","display":"D♯6 / E♭6","register":"altissimo","registerKo":"알티시모","primary":[1,3,8,13,17,19,22],"alternate":[1,3,8,13,18,22]},{"index":37,"midi":88,"id":"E6","primaryName":"E6","enharmonic":"","display":"E6","register":"altissimo","registerKo":"알티시모","primary":[1,3,8,13,22],"alternate":null},{"index":38,"midi":89,"id":"F6","primaryName":"F6","enharmonic":"","display":"F6","register":"altissimo","registerKo":"알티시모","primary":[1,3,8,11,12,13,22],"alternate":[1,3,4,8,11,12,13,17,18,20]},{"index":39,"midi":90,"id":"Fs6","primaryName":"F♯6","enharmonic":"G♭6","display":"F♯6 / G♭6","register":"altissimo","registerKo":"알티시모","primary":[1,3,8,22],"alternate":[1,3,4,8,17,18,20,22]},{"index":40,"midi":91,"id":"G6","primaryName":"G6","enharmonic":"","display":"G6","register":"altissimo","registerKo":"알티시모","primary":[1,3,8,17,18,22],"alternate":[1,8,13,17,22]},{"index":41,"midi":92,"id":"Gs6","primaryName":"G♯6","enharmonic":"A♭6","display":"G♯6 / A♭6","register":"altissimo","registerKo":"알티시모","primary":[1,3,8,13,17,19,22],"alternate":[1,3,8,13,16,17,18,20,24]},{"index":42,"midi":93,"id":"A6","primaryName":"A6","enharmonic":"","display":"A6","register":"altissimo","registerKo":"알티시모","primary":[1,3,8,13,16,22],"alternate":null}];
+const REGISTER = {"chalumeau": {"ko": "샬뤼모", "color": "#E8F3EE", "ink": "#245642"}, "throat": {"ko": "목음역", "color": "#FFF3D6", "ink": "#7A5313"}, "clarion": {"ko": "클라리온", "color": "#E8EEF9", "ink": "#284F86"}, "altissimo": {"ko": "알티시모", "color": "#F5E8F4", "ink": "#7A326F"}};
+let selectedIndex = 0;
+let activeRegister = "all";
+let showAlternate = true;
+
+const esc = (value) => String(value).replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
+
+function shapeMarkup(componentId, active, order, animate) {
+  const [x,y,w,h] = COMPONENTS[componentId];
+  const fill = active ? "#B51F32" : "#FFFFFF";
+  const stroke = active ? "#7F1D2D" : "#95A1AB";
+  const cls = `key${active ? " active" : ""}${animate && active ? " animate" : ""}`;
+  const style = active ? ` style="--i:${order}"` : "";
+  const common = `class="${cls}" data-key="${componentId}" fill="${fill}" stroke="${stroke}" stroke-width=".72" vector-effect="non-scaling-stroke"${style}`;
+  if (ROUND_IDS.has(componentId)) {
+    return `<ellipse cx="${(x+w/2).toFixed(3)}" cy="${(y+h/2).toFixed(3)}" rx="${(w/2).toFixed(3)}" ry="${(h/2).toFixed(3)}" ${common}/>`;
+  }
+  const rx = Math.min(HORIZONTAL_IDS.has(componentId) ? 1.45 : 1.15, w/2, h/2);
+  return `<rect x="${x.toFixed(3)}" y="${y.toFixed(3)}" width="${w.toFixed(3)}" height="${h.toFixed(3)}" rx="${rx.toFixed(3)}" ${common}/>`;
+}
+
+function diagramSVG(pattern, label, animate=false, large=false) {
+  const active = new Set(pattern);
+  const open = COMPONENTS.map((_,i) => shapeMarkup(i,false,0,false)).join("");
+  const pressed = [...active].sort((a,b)=>a-b).map((i,order)=>shapeMarkup(i,true,order,animate)).join("");
+  return `<figure class="diagram-figure ${large ? "large" : ""}"><figcaption>${esc(label)}</figcaption><svg class="finger-svg" viewBox="-16 -19 32 101" role="img" aria-label="${esc(label)} 운지"><path d="M-2.8,-13.2 Q0,-16.4 2.8,-13.2 L2.8,65.6 L5.9,75.4 Q0,80.2 -5.9,75.4 L-2.8,65.6 Z" fill="#F8FAFC" stroke="#46525C" stroke-width=".82" vector-effect="non-scaling-stroke"/><path d="M-2.7,-9.5 L2.7,-9.5 M-2.8,25.8 L2.8,25.8 M-3,44.7 L3,44.7 M-3.2,66.3 L3.2,66.3" fill="none" stroke="#7B8790" stroke-width=".66" vector-effect="non-scaling-stroke"/><path d="M-1.8,-14.7 L-1.1,-18 L1.1,-18 L1.8,-14.7" fill="#F8FAFC" stroke="#46525C" stroke-width=".7" vector-effect="non-scaling-stroke"/>${open}${pressed}</svg></figure>`;
+}
+
+function fullName(note) { return note.primaryName + (note.enharmonic ? ` / ${note.enharmonic}` : ""); }
+
+function renderFocus(animate=false) {
+  const note = DATA[selectedIndex];
+  document.getElementById("focusRegister").textContent = note.registerKo;
+  document.getElementById("focusRegister").dataset.register = note.register;
+  document.getElementById("focusTitle").textContent = fullName(note);
+  document.getElementById("focusMeta").textContent = `기보음 · ${note.registerKo}${note.alternate ? " · 대체 운지 있음" : " · 기본 운지"}`;
+  const diagrams = [diagramSVG(note.primary,"기본 운지",animate,true)];
+  if (showAlternate && note.alternate) diagrams.push(diagramSVG(note.alternate,"대체 운지",animate,true));
+  document.getElementById("focusDiagrams").innerHTML = diagrams.join("");
+  document.getElementById("noteSelect").value = String(selectedIndex);
+  document.querySelectorAll(".note-card").forEach((card, i) => card.classList.toggle("selected", i === selectedIndex));
+}
+
+function renderGrid() {
+  const grid = document.getElementById("chartGrid");
+  grid.innerHTML = DATA.map((note,i) => {
+    const hidden = activeRegister !== "all" && note.register !== activeRegister;
+    const reg = REGISTER[note.register];
+    const diagrams = [diagramSVG(note.primary,"기본")];
+    if (showAlternate && note.alternate) diagrams.push(diagramSVG(note.alternate,"대체"));
+    return `<button class="note-card${i===selectedIndex ? " selected" : ""}" data-index="${i}" data-register="${note.register}" ${hidden ? "hidden" : ""} aria-label="${esc(fullName(note))} 운지 보기"><span class="card-head"><span><strong>${esc(note.primaryName)}</strong>${note.enharmonic ? `<small>= ${esc(note.enharmonic)}</small>` : ""}</span><em style="--badge-bg:${reg.color};--badge-ink:${reg.ink}">${esc(note.registerKo)}</em></span><span class="card-diagrams">${diagrams.join("")}</span></button>`;
+  }).join("");
+  grid.querySelectorAll(".note-card").forEach(card => card.addEventListener("click", () => {
+    selectedIndex = Number(card.dataset.index);
+    renderFocus(false);
+    document.getElementById("focusPanel").scrollIntoView({behavior:"smooth",block:"start"});
+  }));
+}
+
+function populateSelect() {
+  const select = document.getElementById("noteSelect");
+  select.innerHTML = DATA.map((n,i)=>`<option value="${i}">${esc(fullName(n))} · ${esc(n.registerKo)}</option>`).join("");
+}
+
+populateSelect();
+renderGrid();
+renderFocus(false);
+
+document.getElementById("noteSelect").addEventListener("change", event => { selectedIndex = Number(event.target.value); renderFocus(false); });
+document.getElementById("alternateToggle").addEventListener("change", event => { showAlternate = event.target.checked; renderGrid(); renderFocus(false); });
+document.getElementById("playButton").addEventListener("click", () => renderFocus(true));
+document.querySelectorAll("[data-filter]").forEach(button => button.addEventListener("click", () => {
+  activeRegister = button.dataset.filter;
+  document.querySelectorAll("[data-filter]").forEach(b => b.setAttribute("aria-pressed", String(b===button)));
+  renderGrid();
+}));
+
+document.getElementById("searchInput").addEventListener("input", event => {
+  const q = event.target.value.trim().toLowerCase().replace(/#/g,"♯").replace(/b/g,"♭");
+  document.querySelectorAll(".note-card").forEach((card,i) => {
+    const note = DATA[i];
+    const regMatch = activeRegister === "all" || note.register === activeRegister;
+    const textMatch = !q || fullName(note).toLowerCase().includes(q) || note.registerKo.includes(q);
+    card.hidden = !(regMatch && textMatch);
+  });
+});
+
+</script>
+</body></html>
