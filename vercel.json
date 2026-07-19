@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/clarinet_solfege_trainer.html"
+    }
+  ]
+}
