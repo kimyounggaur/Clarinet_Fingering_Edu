@@ -220,7 +220,7 @@ body.settings-fallback{overflow:hidden}body.settings-fallback:before{content:"";
     <section class="setting"><h3>표기</h3><div class="segments" id="labelSettings"><button class="theme-btn" type="button" data-label="both" aria-pressed="true">계이름+영문</button><button class="theme-btn" type="button" data-label="solfege" aria-pressed="false">계이름</button><button class="theme-btn" type="button" data-label="letter" aria-pressed="false">영문</button></div></section>
     <section class="setting"><h3>테마</h3><div class="segments" id="themeSettings"><button class="theme-btn" type="button" data-theme-value="auto" aria-pressed="true">자동</button><button class="theme-btn" type="button" data-theme-value="light" aria-pressed="false">라이트</button><button class="theme-btn" type="button" data-theme-value="dark" aria-pressed="false">다크</button></div></section>
     <section class="setting"><h3>애니메이션 속도</h3><div class="segments" id="speedSettings"><button class="theme-btn" type="button" data-speed="1" aria-pressed="true">보통</button><button class="theme-btn" type="button" data-speed="0.5" aria-pressed="false">천천히</button><button class="theme-btn" type="button" data-speed="0" aria-pressed="false">즉시</button></div><p class="setting-note" id="motionNote">시스템의 모션 줄이기 설정도 자동으로 존중합니다.</p></section>
-    <section class="setting"><h3>보기·소리</h3><div class="segments"><button class="theme-btn switch-btn" type="button" id="soundSetting" aria-pressed="true">소리 켬</button><button class="theme-btn switch-btn" type="button" id="writtenSoundSetting" aria-pressed="false">실음 재생</button></div><div class="segments" style="margin-top:6px"><button class="theme-btn switch-btn" type="button" id="handsSetting" aria-pressed="true">손 가이드 켬</button><button class="theme-btn switch-btn" type="button" id="labelsSetting" aria-pressed="true">손가락 라벨 켬</button></div></section>
+    <section class="setting"><h3>보기·소리</h3><div class="segments"><button class="theme-btn switch-btn" type="button" id="soundSetting" aria-pressed="true">소리 켬</button><button class="theme-btn switch-btn" type="button" id="writtenSoundSetting" aria-pressed="false">실음 재생</button></div><p class="setting-note">고품질 클라리넷 합성음은 음역별 배음·리드 어택·호흡·관 공명과 자연스러운 공간감을 재현합니다.</p><div class="segments" style="margin-top:6px"><button class="theme-btn switch-btn" type="button" id="handsSetting" aria-pressed="true">손 가이드 켬</button><button class="theme-btn switch-btn" type="button" id="labelsSetting" aria-pressed="true">손가락 라벨 켬</button></div></section>
     <p class="setting-note">설정은 이 기기에 저장됩니다. 소리가 꺼져 있으면 오디오 장치를 열지 않습니다.</p>
   </div>
 </dialog>
@@ -495,19 +495,79 @@ const animator={
   tick(now){if(!this.running)return;const alive=this.apply(now);if(alive)this.raf=requestAnimationFrame(t=>this.tick(t));else{this.running=false;this.raf=0;const final=fingerStateMap(this.targetPattern);for(const finger of FINGER_ORDER)setFingerTip(finger,...final[finger].xy,final[finger].active)}}
 };
 
-/* [7] AUDIO — one lazy Web Audio gate */
-const audioGate=(()=>{
-  let ctx=null,wave=null,voice=null,releaseTimer=0;let serial=0;
-  function ensure(){if(!state.sound)return null;if(!ctx){const AudioCtor=window.AudioContext||window.webkitAudioContext;if(!AudioCtor)return null;ctx=new AudioCtor();document.documentElement.dataset.audioContextCreated="true";const real=new Float32Array([0,1,0,.55,0,.3,0,.12,0,.06]),imag=new Float32Array(real.length);wave=ctx.createPeriodicWave(real,imag,{disableNormalization:false})}if(ctx.state==="suspended")ctx.resume().catch(()=>{});return ctx}
-  function stopVoice(target,tail=.06){if(!target||!ctx)return;const now=ctx.currentTime;try{target.gain.gain.cancelScheduledValues(now);target.gain.gain.setValueAtTime(Math.max(.0001,target.gain.gain.value),now);target.gain.gain.linearRampToValueAtTime(0,now+tail);target.osc.stop(now+tail+.02)}catch{/* already stopped */}}
-  function attack(note,token=`voice-${++serial}`){
-    const context=ensure();if(!context)return {token,silent:true};if(releaseTimer){clearTimeout(releaseTimer);releaseTimer=0}if(voice)stopVoice(voice,.06);
-    const midi=state.soundWritten?note.midi:note.midi-(state.instrument==="A"?3:2),frequency=440*Math.pow(2,(midi-69)/12),osc=context.createOscillator(),gain=context.createGain(),lp=context.createBiquadFilter();osc.setPeriodicWave(wave);osc.frequency.value=frequency;lp.type="lowpass";lp.frequency.value=Math.min(frequency*6,8000);gain.gain.setValueAtTime(0,context.currentTime);gain.gain.linearRampToValueAtTime(.28,context.currentTime+.04);osc.connect(lp).connect(gain).connect(context.destination);osc.start();voice={osc,gain,token};return {token,silent:false};
+/* TESTABLE_AUDIO_CORE_START */
+const CLARINET_AUDIO_VERSION="clarinet-hybrid-v2";
+const CLARINET_AUDIO_PROFILES=Object.freeze({
+  chalumeau:Object.freeze({even:.16,attack:.055,release:.19,peak:.42,sustain:.33,dark:.82,bright:.22,brightDelay:.022,breath:.021,tongue:.052,cutoff:5900,bodyLow:2.8,bodyHigh:1.1}),
+  throat:Object.freeze({even:.38,attack:.05,release:.18,peak:.4,sustain:.315,dark:.79,bright:.26,brightDelay:.019,breath:.023,tongue:.057,cutoff:6800,bodyLow:2.2,bodyHigh:1.5}),
+  clarion:Object.freeze({even:.72,attack:.044,release:.17,peak:.365,sustain:.29,dark:.74,bright:.31,brightDelay:.016,breath:.025,tongue:.062,cutoff:7900,bodyLow:1.7,bodyHigh:2}),
+  altissimo:Object.freeze({even:.9,attack:.038,release:.15,peak:.365,sustain:.285,dark:.68,bright:.36,brightDelay:.013,breath:.028,tongue:.067,cutoff:9000,bodyLow:1.1,bodyHigh:2.4})
+});
+function audioClamp(value,min,max){return Math.max(min,Math.min(max,value))}
+function audioSmoothstep(edge0,edge1,value){const x=audioClamp((value-edge0)/(edge1-edge0),0,1);return x*x*(3-2*x)}
+function clarinetAudioProfile(register){return CLARINET_AUDIO_PROFILES[register]||CLARINET_AUDIO_PROFILES.clarion}
+function blendClarinetAudioProfiles(from,to,amount){const mixed={};for(const key of Object.keys(from))mixed[key]=from[key]+(to[key]-from[key])*amount;return mixed}
+function clarinetAudioProfileForMidi(noteMidi,register){
+  const profiles=CLARINET_AUDIO_PROFILES;
+  if(noteMidi<=64)return profiles.chalumeau;
+  if(noteMidi<69)return blendClarinetAudioProfiles(profiles.chalumeau,profiles.throat,audioSmoothstep(64,69,noteMidi));
+  if(noteMidi===69)return profiles.throat;
+  if(noteMidi<73)return blendClarinetAudioProfiles(profiles.throat,profiles.clarion,audioSmoothstep(69,73,noteMidi));
+  if(noteMidi<=82)return profiles.clarion;
+  if(noteMidi<87)return blendClarinetAudioProfiles(profiles.clarion,profiles.altissimo,audioSmoothstep(82,87,noteMidi));
+  return CLARINET_AUDIO_PROFILES[register]||profiles.altissimo;
+}
+function soundingMidiForAudio(noteMidi,instrument="Bb",soundWritten=false){return soundWritten?noteMidi:noteMidi-(instrument==="A"?3:2)}
+function frequencyForMidi(midi){return 440*Math.pow(2,(midi-69)/12)}
+function clarinetTonePlan(noteMidi,register,instrument="Bb",soundWritten=false){
+  const profile=clarinetAudioProfileForMidi(noteMidi,register),midi=soundingMidiForAudio(noteMidi,instrument,soundWritten),frequency=frequencyForMidi(midi),height=audioClamp((midi-50)/43,0,1);
+  return {writtenMidi:noteMidi,midi,frequency,register:CLARINET_AUDIO_PROFILES[register]?register:"clarion",attack:profile.attack,release:profile.release,peak:profile.peak*(1-height*.07),sustain:profile.sustain*(1-height*.06),cutoff:audioClamp(profile.cutoff+frequency*.8,3600,10500),profile};
+}
+function buildClarinetHarmonics(frequency,register,layer="dark",sampleRate=48000,profileOverride=null){
+  const profile=profileOverride||clarinetAudioProfile(register),bright=layer==="bright",limit=Math.max(1,Math.min(48,Math.floor(sampleRate*.45/frequency))),slope=bright?.96:1.34,damping=bright?11800:7900,coefficients=new Array(limit+1).fill(0);
+  let sumSquares=0,sumAbsolute=0;
+  for(let harmonic=1;harmonic<=limit;harmonic++){
+    const partialFrequency=frequency*harmonic,parity=harmonic%2?1:profile.even+(1-profile.even)*audioSmoothstep(1200,2000,partialFrequency),air=bright?1+.12*audioSmoothstep(900,3600,partialFrequency):1,amplitude=parity*air*Math.pow(harmonic,-slope)*Math.exp(-Math.pow(partialFrequency/damping,1.35));
+    coefficients[harmonic]=amplitude;sumSquares+=amplitude*amplitude;sumAbsolute+=Math.abs(amplitude);
   }
-  function release(token,tail=.2){if(!voice||voice.token!==token)return;const current=voice;voice=null;stopVoice(current,tail)}
-  function playTimed(note,durationMs=800){const token=`timed-${++serial}`;attack(note,token);releaseTimer=setTimeout(()=>{release(token,.2);releaseTimer=0},Math.max(80,durationMs*.85));return token}
-  function releaseAll(){if(releaseTimer){clearTimeout(releaseTimer);releaseTimer=0}if(voice){const current=voice;voice=null;stopVoice(current,.06)}}
-  return {attack,release,playTimed,releaseAll,clockSample:()=>state.sound&&ctx?{kind:"audio",now:ctx.currentTime*1000}:{kind:"performance",now:performance.now()},hasContext:()=>Boolean(ctx)};
+  const rms=Math.sqrt(sumSquares/2)||1,scale=Math.min(.58/rms,1.75/(sumAbsolute||1));
+  for(let harmonic=1;harmonic<coefficients.length;harmonic++)coefficients[harmonic]*=scale;
+  return coefficients;
+}
+/* TESTABLE_AUDIO_CORE_END */
+
+/* [7] AUDIO — lazy, monophonic hybrid clarinet synthesizer */
+const audioGate=(()=>{
+  let ctx=null,master=null,noiseBuffer=null,voice=null,releaseTimer=0,serial=0,voiceSerial=0,peakVoices=0;const waveCache=new Map(),liveVoices=new Set();
+  function seededNoise(seed){let value=seed>>>0;return()=>{value^=value<<13;value^=value>>>17;value^=value<<5;return(value>>>0)/4294967296*2-1}}
+  function createNoiseBuffer(context){const length=Math.max(1,Math.round(context.sampleRate*2)),buffer=context.createBuffer(1,length,context.sampleRate),data=buffer.getChannelData(0),random=seededNoise(0x434c4152);let smooth=0;for(let i=0;i<length;i++){const white=random();smooth=smooth*.68+white*.32;data[i]=white*.74+smooth*.26}return buffer}
+  function createRoomImpulse(context){const length=Math.max(1,Math.round(context.sampleRate*.52)),buffer=context.createBuffer(2,length,context.sampleRate),random=seededNoise(0x524f4f4d);for(let channel=0;channel<2;channel++){const data=buffer.getChannelData(channel);let diffuse=0;for(let i=0;i<length;i++){const envelope=Math.pow(1-i/length,3.1),white=random();diffuse=diffuse*.77+white*.23;data[i]=(white*.58+diffuse*.42)*envelope*.17}for(const [seconds,gain] of [[.011,.34],[.019,.23],[.031,.15],[.047,.09]]){const index=Math.min(length-1,Math.round(context.sampleRate*(seconds+channel*.0013)));data[index]+=gain}}return buffer}
+  function createMaster(context){const input=context.createGain(),dry=context.createGain(),room=context.createConvolver(),wet=context.createGain(),compressor=context.createDynamicsCompressor(),output=context.createGain();dry.gain.value=.93;room.normalize=false;room.buffer=createRoomImpulse(context);wet.gain.value=.075;compressor.threshold.value=-14;compressor.knee.value=10;compressor.ratio.value=3;compressor.attack.value=.003;compressor.release.value=.16;output.gain.value=.74;input.connect(dry).connect(compressor);input.connect(room).connect(wet).connect(compressor);compressor.connect(output).connect(context.destination);return {input,output,compressor,level:.74,muted:false}}
+  function updateVoiceDiagnostics(){document.documentElement.dataset.audioActiveVoices=String(liveVoices.size);peakVoices=Math.max(peakVoices,liveVoices.size);document.documentElement.dataset.audioPeakVoices=String(peakVoices)}
+  function ensure(){if(!state.sound)return null;if(!ctx){const AudioCtor=window.AudioContext||window.webkitAudioContext;if(!AudioCtor)return null;ctx=new AudioCtor({latencyHint:"interactive"});master=createMaster(ctx);noiseBuffer=createNoiseBuffer(ctx);document.documentElement.dataset.audioContextCreated="true";document.documentElement.dataset.audioEngine=CLARINET_AUDIO_VERSION;document.documentElement.dataset.audioSampleRate=String(ctx.sampleRate);updateVoiceDiagnostics()}if(ctx.state==="suspended")ctx.resume().catch(()=>{});return ctx}
+  function waveFor(context,plan,layer){const key=`${context.sampleRate}:${plan.writtenMidi}:${plan.midi}:${plan.register}:${layer}`;if(waveCache.has(key))return waveCache.get(key);const real=new Float32Array(buildClarinetHarmonics(plan.frequency,plan.register,layer,context.sampleRate,plan.profile)),imag=new Float32Array(real.length),wave=context.createPeriodicWave(real,imag,{disableNormalization:true});waveCache.set(key,wave);return wave}
+  function holdAndFade(param,now,tail){try{if(typeof param.cancelAndHoldAtTime==="function")param.cancelAndHoldAtTime(now);else{const value=Math.max(.0001,param.value);param.cancelScheduledValues(now);param.setValueAtTime(value,now)}param.exponentialRampToValueAtTime(.0001,now+Math.max(.018,tail))}catch{/* node may already be stopped */}}
+  function stopVoice(target,tail=.06,force=false){if(!target||!ctx||(target.stopping&&!force))return;target.stopping=true;const now=ctx.currentTime,stopAt=now+Math.max(.018,tail)+.035;holdAndFade(target.output.gain,now,tail);for(const source of target.sources)try{source.stop(stopAt)}catch{/* already stopped */}}
+  function openMaster(context){if(!master?.muted)return;const now=context.currentTime,param=master.output.gain;try{param.cancelScheduledValues(now);param.setValueAtTime(Math.max(.0001,param.value),now);param.linearRampToValueAtTime(master.level,now+.016)}catch{/* context may be closing */}master.muted=false}
+  function muteMaster(context,tail=.045){if(!master||master.muted)return;holdAndFade(master.output.gain,context.currentTime,tail);master.muted=true}
+  function attack(note,token=`voice-${++serial}`){
+    const context=ensure();if(!context)return {token,silent:true};openMaster(context);if(releaseTimer){clearTimeout(releaseTimer);releaseTimer=0}if(voice)stopVoice(voice,.06);
+    const plan=clarinetTonePlan(note.midi,note.register,state.instrument,state.soundWritten),now=context.currentTime+.004,darkOsc=context.createOscillator(),brightOsc=context.createOscillator(),darkGain=context.createGain(),brightGain=context.createGain(),noise=context.createBufferSource(),breathFilter=context.createBiquadFilter(),tongueFilter=context.createBiquadFilter(),breathGain=context.createGain(),tongueGain=context.createGain(),tone=context.createGain(),highpass=context.createBiquadFilter(),bodyLow=context.createBiquadFilter(),bodyHigh=context.createBiquadFilter(),lowpass=context.createBiquadFilter(),output=context.createGain(),drift=context.createOscillator(),driftDepth=context.createGain();
+    darkOsc.setPeriodicWave(waveFor(context,plan,"dark"));brightOsc.setPeriodicWave(waveFor(context,plan,"bright"));darkOsc.frequency.value=plan.frequency;brightOsc.frequency.value=plan.frequency;darkOsc.detune.setValueAtTime(-2.5,now);brightOsc.detune.setValueAtTime(-2.5,now);darkOsc.detune.linearRampToValueAtTime(0,now+.038);brightOsc.detune.linearRampToValueAtTime(0,now+.038);
+    drift.type="sine";drift.frequency.value=.31;driftDepth.gain.value=1.35;drift.connect(driftDepth);driftDepth.connect(darkOsc.detune);driftDepth.connect(brightOsc.detune);
+    darkGain.gain.setValueAtTime(.0001,now);darkGain.gain.linearRampToValueAtTime(plan.profile.dark,now+plan.attack);darkGain.gain.setTargetAtTime(plan.profile.dark*.96,now+plan.attack,.08);brightGain.gain.setValueAtTime(.0001,now);brightGain.gain.linearRampToValueAtTime(plan.profile.bright,now+plan.attack+plan.profile.brightDelay);brightGain.gain.setTargetAtTime(plan.profile.bright*.92,now+plan.attack+plan.profile.brightDelay,.09);
+    noise.buffer=noiseBuffer;noise.loop=true;breathFilter.type="bandpass";breathFilter.frequency.value=audioClamp(1650+plan.frequency*.72,1500,3300);breathFilter.Q.value=.62;tongueFilter.type="bandpass";tongueFilter.frequency.value=audioClamp(2850+plan.frequency*.8,2900,4700);tongueFilter.Q.value=2.1;
+    breathGain.gain.setValueAtTime(.0001,now);breathGain.gain.linearRampToValueAtTime(plan.profile.breath,now+.018);breathGain.gain.setTargetAtTime(plan.profile.breath*.52,now+.09,.055);tongueGain.gain.setValueAtTime(.0001,now);tongueGain.gain.linearRampToValueAtTime(plan.profile.tongue,now+.009);tongueGain.gain.exponentialRampToValueAtTime(.0001,now+.047);
+    darkOsc.connect(darkGain).connect(tone);brightOsc.connect(brightGain).connect(tone);noise.connect(breathFilter).connect(breathGain).connect(tone);noise.connect(tongueFilter).connect(tongueGain).connect(tone);
+    highpass.type="highpass";highpass.frequency.value=52;highpass.Q.value=.58;bodyLow.type="peaking";bodyLow.frequency.value=audioClamp(970+plan.frequency*.12,980,1160);bodyLow.Q.value=.72;bodyLow.gain.value=plan.profile.bodyLow;bodyHigh.type="peaking";bodyHigh.frequency.value=audioClamp(2250+plan.frequency*.16,2300,2750);bodyHigh.Q.value=.9;bodyHigh.gain.value=plan.profile.bodyHigh;lowpass.type="lowpass";lowpass.frequency.value=plan.cutoff;lowpass.Q.value=.58;
+    output.gain.setValueAtTime(.0001,now);output.gain.linearRampToValueAtTime(plan.peak,now+plan.attack);output.gain.setTargetAtTime(plan.sustain,now+plan.attack+.025,.07);tone.connect(highpass).connect(bodyLow).connect(bodyHigh).connect(lowpass).connect(output).connect(master.input);
+    const sources=[darkOsc,brightOsc,noise,drift],nodes=[darkOsc,brightOsc,darkGain,brightGain,noise,breathFilter,tongueFilter,breathGain,tongueGain,tone,highpass,bodyLow,bodyHigh,lowpass,output,drift,driftDepth],current={token,output,sources,nodes,release:plan.release,stopping:false},voiceNumber=++voiceSerial;liveVoices.add(current);updateVoiceDiagnostics();darkOsc.onended=()=>{for(const node of nodes)try{node.disconnect()}catch{/* already disconnected */}liveVoices.delete(current);updateVoiceDiagnostics()};darkOsc.start(now);brightOsc.start(now);noise.start(now,(voiceNumber*.173)%noiseBuffer.duration);drift.start(now);
+    voice=current;document.documentElement.dataset.audioLastMidi=String(plan.midi);document.documentElement.dataset.audioLastFrequency=plan.frequency.toFixed(3);document.documentElement.dataset.audioLastRegister=plan.register;return {token,silent:false};
+  }
+  function release(token,tail){if(!voice||voice.token!==token)return;const current=voice;voice=null;stopVoice(current,tail??current.release)}
+  function playTimed(note,durationMs=800){const token=`timed-${++serial}`,result=attack(note,token);if(!result.silent)releaseTimer=setTimeout(()=>{release(token);releaseTimer=0},Math.max(80,durationMs*.85));return token}
+  function releaseAll(){if(releaseTimer){clearTimeout(releaseTimer);releaseTimer=0}voice=null;if(ctx){for(const current of [...liveVoices])stopVoice(current,.045,true);muteMaster(ctx)}}
+  return {attack,release,playTimed,releaseAll,clockSample:()=>state.sound&&ctx?{kind:"audio",now:ctx.currentTime*1000}:{kind:"performance",now:performance.now()},hasContext:()=>Boolean(ctx),diagnostics:()=>({version:CLARINET_AUDIO_VERSION,activeVoices:liveVoices.size,peakVoices,masterMuted:Boolean(master?.muted),contextState:ctx?.state||"none"})};
 })();
 
 /* [8] UI + COMMON SELECTION PIPELINE */
