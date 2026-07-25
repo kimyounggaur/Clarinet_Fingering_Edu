@@ -133,7 +133,7 @@ body.settings-fallback{overflow:hidden}body.settings-fallback:before{content:"";
   .mode-bar{grid-area:mode}.panel-stack{grid-area:panel;display:grid;gap:12px}.scene-card{grid-area:scene;position:sticky;top:70px;height:calc(100vh - 92px);max-height:760px}.controls-card{grid-area:controls}
 }
 @media(orientation:landscape) and (max-height:500px){
-  .app-header{position:relative}.main{grid-template-columns:minmax(0,.7fr) minmax(320px,1.3fr);grid-template-areas:"scene mode" "scene panel" "scene controls";padding-top:6px}.scene-card{position:sticky;top:6px;height:calc(100vh - 12px);min-height:280px}.mode-panel{padding:10px 13px}.info-card{padding:10px 13px}.note-btn{height:56px}
+  .app-header{position:relative}.main{grid-template-columns:minmax(0,.7fr) minmax(320px,1.3fr);grid-template-areas:"scene mode" "scene panel" "scene controls";align-items:start;padding-top:6px}.mode-bar{grid-area:mode}.panel-stack{grid-area:panel;display:grid;gap:12px}.scene-card{grid-area:scene;position:sticky;top:6px;height:calc(100vh - 12px);min-height:280px}.controls-card{grid-area:controls}.mode-panel{padding:10px 13px}.info-card{padding:10px 13px}.note-btn{height:56px}
 }
 @media(max-width:620px){dialog{width:100vw;max-width:none;max-height:88vh;max-height:88dvh;margin:auto 0 0;border-radius:24px 24px 0 0;border-bottom:0}dialog.fallback-open{left:0;right:0;top:auto;bottom:0;transform:none}}
 @media(max-width:779px) and (orientation:portrait){.main{padding-bottom:calc(50vh + 16px);padding-bottom:calc(50dvh + 16px)}.controls-card{position:fixed;left:50%;bottom:0;bottom:env(safe-area-inset-bottom);z-index:25;width:calc(100% - 12px);max-width:767px;max-height:50vh;max-height:50dvh;overflow-y:auto;transform:translateX(-50%);border-radius:20px 20px 0 0;box-shadow:0 -12px 34px rgba(23,33,43,.16)}}
@@ -386,7 +386,7 @@ const sessionStore=new Map();
 function loadJson(key,fallback){let value=null;try{value=localStorage.getItem(key)}catch{/* use memory */}if(value==null)value=sessionStore.get(key)??null;if(value==null)return fallback;try{return JSON.parse(value)}catch{return fallback}}
 function saveJson(key,value){const serialized=JSON.stringify(value);sessionStore.set(key,serialized);try{localStorage.setItem(key,serialized)}catch{/* memory keeps this page session */}}
 function loadSettings(){
-  const raw=loadJson(SETTINGS_KEY,{}),speed=[1,.5,0].includes(Number(raw.speed))?Number(raw.speed):1;
+  const stored=loadJson(SETTINGS_KEY,{}),raw=stored&&typeof stored==="object"&&!Array.isArray(stored)?stored:{},speed=[1,.5,0].includes(Number(raw.speed))?Number(raw.speed):1;
   return {instrument:["Bb","A"].includes(raw.instrument)?raw.instrument:"Bb",labelMode:["both","solfege","letter"].includes(raw.labelMode)?raw.labelMode:"both",sound:raw.sound!==false,soundWritten:raw.soundWritten===true,showHands:raw.showHands!==false,showLabels:raw.showLabels!==false,speed,theme:VALID_THEMES.has(raw.theme)?raw.theme:"auto"};
 }
 const restoredSettings=loadSettings();
@@ -394,7 +394,6 @@ const state={noteIndex:null,inputAcc:"natural",useAlternate:false,octave:4,accid
 const motionQuery=matchMedia("(prefers-reduced-motion: reduce)");
 let lastPattern=[];
 let toastTimer=0,quizAdvanceTimer=0;
-let suppressInfoLive=false;
 function currentNote(){return state.noteIndex==null?null:DATA[state.noteIndex]}
 function currentPattern(){const note=currentNote();return note?(state.useAlternate&&note.alternate?note.alternate:note.primary):[]}
 function persistSettings(){saveJson(SETTINGS_KEY,{instrument:state.instrument,labelMode:state.labelMode,sound:state.sound,soundWritten:state.soundWritten,showHands:state.showHands,showLabels:state.showLabels,speed:state.speed,theme:state.theme})}
@@ -605,7 +604,7 @@ function invalidRequestMessage(request){if(request.midi<52||request.midi>93)retu
 function selectNoteRequest(request,source="legacy-pointer",{announceLive=true,suppressLive=false}={}){
   if(!request||!request.valid){if(request)showToast(invalidRequestMessage(request));return {handled:false,note:null,midi:request?.midi}}
   const note=NOTE_BY_MIDI.get(request.midi);if(!note)throw new Error(`유효 MIDI ${request.midi}가 DATA에 없습니다`);
-  performance.mark("clarinet-input-start");dispatch({type:"SELECT_NOTE",note,octave:request.octave,accidental:request.accidental,inputAcc:request.inputAcc});suppressInfoLive=suppressLive;render();suppressInfoLive=false;animator.transitionTo(currentPattern());if(announceLive)announceSelection(note);performance.mark("clarinet-animation-start");try{const measure=performance.measure("clarinet-input-latency","clarinet-input-start","clarinet-animation-start");document.documentElement.dataset.inputLatencyMs=measure.duration.toFixed(2)}catch{}
+  performance.clearMarks("clarinet-input-start");performance.clearMarks("clarinet-animation-start");performance.clearMeasures("clarinet-input-latency");performance.mark("clarinet-input-start");dispatch({type:"SELECT_NOTE",note,octave:request.octave,accidental:request.accidental,inputAcc:request.inputAcc});render();animator.transitionTo(currentPattern());if(announceLive&&!suppressLive)announceSelection(note);performance.mark("clarinet-animation-start");try{const measure=performance.measure("clarinet-input-latency","clarinet-input-start","clarinet-animation-start");document.documentElement.dataset.inputLatencyMs=measure.duration.toFixed(2)}catch{}finally{performance.clearMarks("clarinet-input-start");performance.clearMarks("clarinet-animation-start");performance.clearMeasures("clarinet-input-latency")}
   return {handled:true,note,midi:note.midi,source};
 }
 function beginNoteInput(request,{source="legacy-pointer",token}={}){const result=selectNoteRequest(request,source);if(!result.handled)return false;audioGate.attack(result.note,token);return true}
@@ -632,13 +631,13 @@ function restoreHash(){
 
 /* [9] QUIZ MODE */
 function requestFromMidi(midi,inputAcc="sharp"){
-  const note=NOTE_BY_MIDI.get(midi);if(!note)return null;const pitch=parsePitchName(note.primaryName),letter=pitch?.pitch?.[0],digit={C:1,D:2,E:3,F:4,G:5,A:6,B:7}[letter]||1,accidental=note.primaryName.includes("♯")?"sharp":"natural";
-  return {kind:"midi",digit,octave:pitch?.octave||4,accidental,inputAcc:inputAcc==="flat"?"flat":accidental,midi,valid:true};
+  const note=NOTE_BY_MIDI.get(midi);if(!note)return null;const useFlat=inputAcc==="flat"&&note.enharmonic,pitchName=useFlat?note.enharmonic:note.primaryName,pitch=parsePitchName(pitchName),letter=pitch?.pitch?.[0],digit={C:1,D:2,E:3,F:4,G:5,A:6,B:7}[letter]||1,accidental=pitchName.includes("♭")?"flat":pitchName.includes("♯")?"sharp":"natural";
+  return {kind:"midi",digit,octave:pitch?.octave||4,accidental,inputAcc:useFlat?"flat":accidental,midi,valid:true};
 }
 function makeQuiz(bank,questions=null){return {bank,questions:questions||drawQuestions(bank,10),index:0,attemptsLeft:2,correct:0,revealed:false,answered:false,finished:false,answers:[],wrong:[],feedback:"",feedbackKind:""}}
 function updateQuizFeedbackOnly(){const quiz=state.quiz;if(!quiz||quiz.finished)return;document.getElementById("quizCounter").textContent=`문제 ${quiz.index+1} / ${quiz.questions.length} · 남은 기회 ${quiz.attemptsLeft}`;const feedback=document.getElementById("quizFeedback");feedback.textContent=quiz.feedback;feedback.className=`feedback ${quiz.feedbackKind}`}
 function resetQuizQuestion(){
-  clearTimeout(quizAdvanceTimer);const quiz=state.quiz;if(!quiz||quiz.finished)return;quiz.attemptsLeft=2;quiz.revealed=false;quiz.answered=false;quiz.feedback="";quiz.feedbackKind="";dispatch({type:"RESET_SCENE"});suppressInfoLive=true;render();suppressInfoLive=false;animator.transitionTo([]);const label=quizNoteLabelFromMidi(quiz.questions[quiz.index]);announce(`문제 ${quiz.index+1}번, ${label}`);
+  clearTimeout(quizAdvanceTimer);const quiz=state.quiz;if(!quiz||quiz.finished)return;quiz.attemptsLeft=2;quiz.revealed=false;quiz.answered=false;quiz.feedback="";quiz.feedbackKind="";dispatch({type:"RESET_SCENE"});render();animator.transitionTo([]);const label=quizNoteLabelFromMidi(quiz.questions[quiz.index]);announce(`문제 ${quiz.index+1}번, ${label}`);
 }
 function startQuiz(bank=state.quiz?.bank||"low",questions=null){state.quiz=makeQuiz(bank,questions);resetQuizQuestion()}
 function handleQuizInput(input){
@@ -654,7 +653,7 @@ function advanceQuiz(){
 }
 function finishQuiz(){const quiz=state.quiz;if(!quiz||quiz.finished)return;quiz.finished=true;persistQuizProgress(quiz);renderQuiz();announce(`퀴즈 완료, ${quiz.questions.length}문제 중 ${quiz.correct}문제 정답`)}
 function persistQuizProgress(quiz){
-  const progress=loadJson(PROGRESS_KEY,{version:1,quiz:{total:0,correct:0,byMidi:{}}});if(progress.version!==1||!progress.quiz)return;progress.quiz.total+=quiz.answers.length;progress.quiz.correct+=quiz.answers.filter(a=>a.correct).length;for(const answer of quiz.answers){const key=String(answer.midi),entry=progress.quiz.byMidi[key]||{asked:0,correct:0};entry.asked++;if(answer.correct)entry.correct++;progress.quiz.byMidi[key]=entry}saveJson(PROGRESS_KEY,progress);
+  const stored=loadJson(PROGRESS_KEY,null),storedQuiz=stored&&typeof stored==="object"&&stored.version===1&&stored.quiz&&typeof stored.quiz==="object"?stored.quiz:{},storedByMidi=storedQuiz.byMidi&&typeof storedQuiz.byMidi==="object"&&!Array.isArray(storedQuiz.byMidi)?storedQuiz.byMidi:{},count=value=>Number.isInteger(value)&&value>=0?value:0,progress={version:1,quiz:{total:count(storedQuiz.total),correct:count(storedQuiz.correct),byMidi:{...storedByMidi}}};progress.quiz.total+=quiz.answers.length;progress.quiz.correct+=quiz.answers.filter(a=>a.correct).length;for(const answer of quiz.answers){const key=String(answer.midi),saved=progress.quiz.byMidi[key],entry=saved&&typeof saved==="object"?{asked:count(saved.asked),correct:count(saved.correct)}:{asked:0,correct:0};entry.asked++;if(answer.correct)entry.correct++;progress.quiz.byMidi[key]=entry}saveJson(PROGRESS_KEY,progress);
 }
 function renderQuiz(){
   const quiz=state.quiz;if(!quiz)return;const play=document.getElementById("quizPlay"),result=document.getElementById("quizResult"),bank=document.getElementById("quizBank");bank.value=quiz.bank;play.hidden=quiz.finished;result.hidden=!quiz.finished;
