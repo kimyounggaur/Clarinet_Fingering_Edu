@@ -27,21 +27,36 @@ vm.runInContext(
 vm.runInContext(
   `globalThis.__audioTest = {
     CLARINET_AUDIO_VERSION,
+    TRUMPET_AUDIO_VERSION,
+    SYNTH_AUDIO_VERSION,
     CLARINET_AUDIO_PROFILES,
+    TRUMPET_AUDIO_PROFILES,
     clarinetAudioProfile,
     clarinetAudioProfileForMidi,
+    trumpetAudioProfile,
+    trumpetAudioProfileForMidi,
     soundingMidiForAudio,
     frequencyForMidi,
     clarinetTonePlan,
-    buildClarinetHarmonics
+    trumpetTonePlan,
+    tonePlanForTimbre,
+    buildClarinetHarmonics,
+    buildTrumpetHarmonics,
+    buildTimbreHarmonics
   };`,
   context,
 );
 const core = context.__audioTest;
 
 assert.equal(core.CLARINET_AUDIO_VERSION, "clarinet-hybrid-v2");
+assert.equal(core.TRUMPET_AUDIO_VERSION, "trumpet-brass-v1");
+assert.equal(core.SYNTH_AUDIO_VERSION, "dual-wind-v3");
 assert.deepEqual(
   Array.from(Object.keys(core.CLARINET_AUDIO_PROFILES)),
+  ["chalumeau", "throat", "clarion", "altissimo"],
+);
+assert.deepEqual(
+  Array.from(Object.keys(core.TRUMPET_AUDIO_PROFILES)),
   ["chalumeau", "throat", "clarion", "altissimo"],
 );
 assert.equal(core.soundingMidiForAudio(60, "Bb", false), 58, "B-flat sounding pitch");
@@ -105,6 +120,86 @@ for (const writtenMidi of Array.from({ length: 42 }, (_, index) => index + 52)) 
   }
 }
 
+for (const writtenMidi of Array.from({ length: 42 }, (_, index) => index + 52)) {
+  for (const instrument of ["Bb", "A"]) {
+    for (const soundWritten of [false, true]) {
+      const register = registerForMidi(writtenMidi);
+      const clarinetPlan = core.tonePlanForTimbre(
+        "clarinet",
+        writtenMidi,
+        register,
+        instrument,
+        soundWritten,
+      );
+      const trumpetPlan = core.tonePlanForTimbre(
+        "trumpet",
+        writtenMidi,
+        register,
+        instrument,
+        soundWritten,
+      );
+      const expectedMidi =
+        soundWritten ? writtenMidi : writtenMidi - (instrument === "A" ? 3 : 2);
+      assert.equal(clarinetPlan.timbre, "clarinet");
+      assert.equal(trumpetPlan.timbre, "trumpet");
+      assert.equal(trumpetPlan.midi, expectedMidi, `trumpet sounding MIDI ${writtenMidi}`);
+      assert.equal(
+        trumpetPlan.frequency,
+        clarinetPlan.frequency,
+        `timbre must not change pitch ${writtenMidi}`,
+      );
+      assert(
+        trumpetPlan.attack >= 0.015 && trumpetPlan.attack <= 0.035,
+        `trumpet attack ${writtenMidi}`,
+      );
+      assert(
+        trumpetPlan.release >= 0.09 && trumpetPlan.release <= 0.17,
+        `trumpet release ${writtenMidi}`,
+      );
+      assert(
+        trumpetPlan.peak > trumpetPlan.sustain && trumpetPlan.peak < 0.5,
+        `trumpet level ${writtenMidi}`,
+      );
+      assert(
+        trumpetPlan.cutoff >= 4_500 && trumpetPlan.cutoff <= 12_000,
+        `trumpet cutoff ${writtenMidi}`,
+      );
+      const trumpetSpectra = {};
+      for (const layer of ["dark", "bright"]) {
+        const coefficients = Array.from(
+          core.buildTimbreHarmonics(
+            "trumpet",
+            trumpetPlan.frequency,
+            trumpetPlan.register,
+            layer,
+            48_000,
+            trumpetPlan.profile,
+          ),
+        );
+        trumpetSpectra[layer] = coefficients;
+        const combinedPeak =
+          trumpetPlan.peak *
+          coefficients.reduce((sum, value) => sum + Math.abs(value), 0) *
+          (layer === "dark" ? trumpetPlan.profile.dark : trumpetPlan.profile.bright);
+        assert(combinedPeak < 0.9, `trumpet ${layer} headroom ${writtenMidi}`);
+      }
+      const combinedTrumpetPeak =
+        trumpetPlan.peak *
+        (trumpetSpectra.dark.reduce((sum, value) => sum + Math.abs(value), 0) *
+          trumpetPlan.profile.dark +
+          trumpetSpectra.bright.reduce((sum, value) => sum + Math.abs(value), 0) *
+            trumpetPlan.profile.bright);
+      assert(combinedTrumpetPeak < 0.9, `trumpet combined headroom ${writtenMidi}`);
+    }
+  }
+}
+
+assert.equal(
+  core.tonePlanForTimbre("unknown", 60, "chalumeau").timbre,
+  "clarinet",
+  "unknown timbre falls back to clarinet",
+);
+
 const productionProfiles = Array.from({ length: 42 }, (_, index) =>
   core.clarinetAudioProfileForMidi(index + 52, registerForMidi(index + 52)),
 );
@@ -117,6 +212,34 @@ for (let index = 1; index < productionProfiles.length; index += 1) {
     `sustain continuity at MIDI ${index + 52}`,
   );
   assert(Math.abs(current.cutoff - previous.cutoff) < 900, `filter continuity at MIDI ${index + 52}`);
+}
+
+const trumpetPlans = Array.from({ length: 42 }, (_, index) =>
+  core.trumpetTonePlan(index + 52, registerForMidi(index + 52), "Bb", false),
+);
+for (let index = 1; index < trumpetPlans.length; index += 1) {
+  const previous = trumpetPlans[index - 1];
+  const current = trumpetPlans[index];
+  assert(
+    Math.abs(current.profile.even - previous.profile.even) < 0.13,
+    `trumpet timbre continuity at MIDI ${index + 52}`,
+  );
+  assert(
+    Math.abs(20 * Math.log10(current.sustain / previous.sustain)) < 0.7,
+    `trumpet sustain continuity at MIDI ${index + 52}`,
+  );
+  assert(
+    Math.abs(current.cutoff - previous.cutoff) < 1_100,
+    `trumpet filter continuity at MIDI ${index + 52}`,
+  );
+  assert(
+    Math.abs(current.profile.vibratoDepth - previous.profile.vibratoDepth) < 1,
+    `trumpet vibrato continuity at MIDI ${index + 52}`,
+  );
+  assert(
+    Math.abs(current.profile.scoop - previous.profile.scoop) < 3,
+    `trumpet scoop continuity at MIDI ${index + 52}`,
+  );
 }
 
 function spectrumStats(coefficients, frequency) {
@@ -168,6 +291,40 @@ assert(
   "low-register odd/even dominance must relax toward altissimo",
 );
 
+const trumpetLowDark = Array.from(
+  core.buildTrumpetHarmonics(lowFrequency, "chalumeau", "dark", 48_000),
+);
+const trumpetLowBright = Array.from(
+  core.buildTrumpetHarmonics(lowFrequency, "chalumeau", "bright", 48_000),
+);
+const clarinetLowDark = Array.from(
+  core.buildClarinetHarmonics(lowFrequency, "chalumeau", "dark", 48_000),
+);
+const trumpetDarkStats = spectrumStats(trumpetLowDark, lowFrequency);
+const trumpetBrightStats = spectrumStats(trumpetLowBright, lowFrequency);
+const clarinetDarkStats = spectrumStats(clarinetLowDark, lowFrequency);
+assert(
+  trumpetBrightStats.centroid > trumpetDarkStats.centroid,
+  "trumpet bright layer centroid",
+);
+assert(
+  clarinetDarkStats.oddEvenRatio > trumpetDarkStats.oddEvenRatio * 2.5,
+  "clarinet low register must be substantially more odd-harmonic than trumpet",
+);
+assert(
+  trumpetLowDark[2] / trumpetLowDark[1] > 0.35,
+  "trumpet keeps a strong second harmonic",
+);
+assert(
+  trumpetLowDark[4] / trumpetLowDark[1] > 0.08,
+  "trumpet keeps a strong fourth harmonic",
+);
+assert.notDeepEqual(
+  trumpetLowDark,
+  clarinetLowDark,
+  "clarinet and trumpet spectra must be distinct",
+);
+
 for (const sampleRate of [44_100, 48_000]) {
   for (const midi of [50, 58, 69, 82, 91]) {
     const frequency = core.frequencyForMidi(midi);
@@ -192,11 +349,28 @@ assert.match(html, /createBufferSource\(\)/, "breath and tongue noise source");
 assert.match(html, /audioActiveVoices/, "voice lifecycle diagnostics");
 assert.match(
   html,
+  /\$\{context\.sampleRate\}:\$\{plan\.timbre\}:/,
+  "PeriodicWave cache key must include timbre",
+);
+assert.match(html, /data-timbre="clarinet"/, "clarinet timbre control");
+assert.match(html, /data-timbre="trumpet"/, "trumpet timbre control");
+assert.match(
+  html,
+  /timbre:\["clarinet","trumpet"\]\.includes\(raw\.timbre\)\?raw\.timbre:"clarinet"/,
+  "stored timbre validation and clarinet fallback",
+);
+assert.match(
+  html,
+  /\["timbre","instrument","soundWritten"\]\.includes\(key\)\)audioGate\.releaseAll\(\)/,
+  "timbre change must release the previous voice",
+);
+assert.match(
+  html,
   /for\(const current of \[\.\.\.liveVoices\]\)stopVoice\(current,.045,true\);muteMaster\(ctx\)/,
   "releaseAll must stop every live voice and mute the room tail",
 );
 assert.doesNotMatch(html, /AudioWorklet/, "single-file engine must not depend on worklet loading");
 
 console.log(
-  "audio-engine: PASS — 42 pitches, 4 register profiles, band-limited dual spectra, breath/room/master contracts pass",
+  "audio-engine: PASS — 2 timbres × 42 pitches, band-limited spectra, pitch/headroom/lifecycle contracts pass",
 );
